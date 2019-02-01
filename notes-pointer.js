@@ -21,8 +21,8 @@ var RevealNotes = (function() {
         }
 
 		if( !notesFilePath ) {
-			var jsFileLocation = document.querySelector('script[src$="notes.js"]').src;  // this js file path
-			jsFileLocation = jsFileLocation.replace(/notes\.js(\?.*)?$/, '');   // the js folder path
+			var jsFileLocation = document.querySelector('script[src$="notes-pointer.js"]').src;  // this js file path
+			jsFileLocation = jsFileLocation.replace(/notes-pointer\.js(\?.*)?$/, '');   // the js folder path
 			notesFilePath = jsFileLocation + 'notes.html';
 		}
 
@@ -127,6 +127,7 @@ var RevealNotes = (function() {
 
 		}
 
+
 		/**
 		 * Called once we have established a connection to the notes
 		 * window.
@@ -151,6 +152,139 @@ var RevealNotes = (function() {
 
 	}
 
+
+	var RevealPointer = (function() {
+		var isPointing = false;
+		var callbackSet = false;
+		var body = document.querySelector('body');
+		var slides = document.querySelector('.slides');
+
+		var s = 21;
+
+		var pointer = document.createElement('div');
+		pointer.style.position = 'absolute';
+		pointer.style.width = s + 'px';
+		pointer.style.height = s + 'px';
+		pointer.style.marginLeft = '-' + Math.round(s / 2) + 'px';
+		pointer.style.marginTop = '-' + Math.round(s / 2) + 'px';
+		pointer.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
+		pointer.style.borderRadius = '50%';
+		pointer.style.zIndex = 20;
+		pointer.style.display = 'none';
+		slides.appendChild(pointer);  // a *slides* element, so position scales
+
+		function trackMouse(e) {
+			// compute x, y positions relative to slides element in unscaled coords
+			var slidesRect = slides.getBoundingClientRect();
+			var slides_left = slidesRect.left, slides_top = slidesRect.top;
+			if (slides.style.zoom) {  // zoom is weird.
+				slides_left *= slides.style.zoom;
+				slides_top *= slides.style.zoom;
+			}
+
+			var scale = Reveal.getScale();
+			var offsetX = (e.clientX - slides_left) / scale;
+			var offsetY = (e.clientY - slides_top) / scale;
+
+			point(offsetX, offsetY, true);
+			postPointer(offsetX, offsetY, true);
+		}
+
+		function point(x, y, state) {
+			if (state === true) {
+				showPointer();
+			} else if (state === false) {
+				hidePointer();
+			}
+
+			// x, y are in *unscaled* coordinates
+			pointer.style.left = x + 'px';
+			pointer.style.top = y + 'px';
+		}
+
+		function postPointer(x, y, state) {
+			if (notesPopup) {
+				notesPopup.postMessage(JSON.stringify({
+					namespace: 'reveal-notes',
+					type: 'point',
+					x: x,
+					y: y,
+					state: state
+				}), '*');
+			} else if (Reveal.getConfig().postMessageEvents && window.parent !== window.self) {
+				window.parent.postMessage(JSON.stringify({
+					namespace: 'reveal',
+					type: 'point',
+					x: x,
+					y: y,
+					state: state
+				}), '*');
+			}
+		}
+
+		function showPointer() {
+			pointer.style.display = 'block';
+		}
+
+		function hidePointer() {
+			pointer.style.display = 'none';
+		}
+
+		function pointerOn() {
+			showPointer();
+			body.style.cursor = 'none';
+			if( !callbackSet ) {
+				document.addEventListener('mousemove', trackMouse);
+				callbackSet = true;
+			}
+			isPointing = true;
+		}
+
+		function pointerOff() {
+			hidePointer();
+			body.style.cursor = 'auto';
+			if( callbackSet ) {
+				document.removeEventListener('mousemove', trackMouse);
+				callbackSet = false;
+			}
+			isPointing = false;
+			postPointer(0, 0, false);
+		}
+
+		function togglePointer() {
+			if (isPointing) {
+				pointerOff();
+			} else {
+				pointerOn();
+			}
+		}
+
+		Reveal.addKeyBinding({keyCode: 65, key: 'A', description: 'Toggle pointer'}, togglePointer);
+
+		return {point: point, togglePointer: togglePointer};
+	})();
+
+	// add a Reveal.point API function, so postMessage can handle it
+	Reveal.point = RevealPointer.point;
+
+	// patch in Reveal.getSlidesAttributes, in dev branch but not in 3.7.0
+	if( !Reveal.getSlidesAttributes ) {
+		Reveal.getSlidesAttributes = function() {
+			return Reveal.getSlides().map( function( slide ) {
+
+				var attributes = {};
+				for( var i = 0; i < slide.attributes.length; i++ ) {
+					var attribute = slide.attributes[ i ];
+					attributes[ attribute.name ] = attribute.value;
+				}
+				return attributes;
+
+			} );
+
+		}
+	}
+
+
 	if( !/receiver/i.test( window.location.search ) ) {
 
 		// If the there's a 'notes' query set, open directly
@@ -165,6 +299,9 @@ var RevealNotes = (function() {
 
 	}
 
-	return { open: openNotes };
+
+
+
+	return { open: openNotes, RevealPointer: RevealPointer };
 
 })();

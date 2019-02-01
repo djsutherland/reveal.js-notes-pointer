@@ -335,7 +335,7 @@
 			<select class="speaker-layout-dropdown"></select>
 		</div>
 
-		<script src="../../plugin/markdown/marked.js"></script>
+		<script src="node_modules/marked/marked.min.js"></script>
 		<script>
 
 			(function() {
@@ -388,6 +388,9 @@
 							pendingCalls[data.callId](data.result);
 							delete pendingCalls[data.callId];
 						}
+						else if( data.type === 'point' ) {
+							handlePointMessage( data );
+						}
 					}
 					// Messages sent by the reveal.js inside of the current slide preview
 					else if( data && data.namespace === 'reveal' ) {
@@ -398,11 +401,14 @@
 						else if( /slidechanged|fragmentshown|fragmenthidden|paused|resumed/.test( data.eventName ) && currentState !== JSON.stringify( data.state ) ) {
 
 							window.opener.postMessage( JSON.stringify({ method: 'setState', args: [ data.state ]} ), '*' );
-
+						}
+						else if( data.type === 'point' ) {
+							window.opener.postMessage( JSON.stringify({ method: 'point', args: [ data.x, data.y, data.state ] }), '*' )
 						}
 					}
 
 				} );
+
 
 				/**
 				 * Asynchronously calls the Reveal.js API of the main frame.
@@ -436,6 +442,14 @@
 						setupTimer();
 					}
 
+				}
+
+				/**
+				 * Called when there's a pointer going in the main window.
+				 */
+				function handlePointMessage( data ) {
+					var msg = JSON.stringify({ method: 'point', args: [ data.x, data.y, data.state ]});
+					currentSlide.contentWindow.postMessage( msg, '*' );
 				}
 
 				/**
