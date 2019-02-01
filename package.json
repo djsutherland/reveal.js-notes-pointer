@@ -1,12 +1,14 @@
 {
     "name": "reveal.js-notes-pointer",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "A version of the reveal.js notes plugin with a cursor pointer.",
     "author": {
         "name": "Dougal J. Sutherland",
         "email": "dougal@gmail.com",
         "web": "http://dougal.me"
     },
+    "homepage": "https://github.com/dougalsutherland/reveal.js-notes-pointer",
+    "repository": "dougalsutherland/reveal.js-notes-pointer",
     "license": "MIT",
     "dependencies": {
         "marked": "^0.6.0"
