@@ -10,11 +10,9 @@
     "homepage": "https://github.com/dougalsutherland/reveal.js-notes-pointer",
     "repository": "dougalsutherland/reveal.js-notes-pointer",
     "license": "MIT",
-    "dependencies": {
-        "marked": "^0.6.0"
-    },
     "files": [
         "notes-pointer.js",
-        "notes.html"
+        "notes.html",
+        "lib/marked.min.js"
     ]
 }
