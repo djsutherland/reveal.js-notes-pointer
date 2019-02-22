@@ -370,7 +370,7 @@
 					clearTimeout( connectionTimeout );
 					connectionStatus.style.display = 'none';
 
-					var data = JSON.parse( event.data );
+					var data = JSON.parse( event.data || "{}" );
 
 					// The overview mode is only useful to the reveal.js instance
 					// where navigation occurs so we don't sync it
