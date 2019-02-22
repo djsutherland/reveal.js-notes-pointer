@@ -10,15 +10,34 @@
  *    to the notes window
  */
 var RevealNotes = (function() {
+	var config = Reveal.getConfig();
+	var options = config.notes_pointer || {};
+	var pointer_options = options.pointer || {};
+	var notes_options = options.notes || {};
 
-    var notesPopup = null;
+	var notesPopup = null;
+
+	function addKeyBinding(key, keyCode, defaultKey, description, binding) {
+		if (key === undefined && keyCode === undefined) {
+			key = defaultKey;
+		}
+
+		if (keyCode === undefined) {
+			keyCode = key.toUpperCase().charCodeAt(0);
+		} else if (key === undefined) {
+			key = String.fromCharCode(keyCode);
+		}
+
+		Reveal.addKeyBinding({keyCode: keyCode, key: key, description: description}, binding);
+	}
+
 
 	function openNotes( notesFilePath ) {
 
-        if (notesPopup && !notesPopup.closed) {
-            notesPopup.focus();
-            return;
-        }
+		if (notesPopup && !notesPopup.closed) {
+			notesPopup.focus();
+			return;
+		}
 
 		if( !notesFilePath ) {
 			var jsFileLocation = document.querySelector('script[src$="notes-pointer.js"]').src;  // this js file path
@@ -159,7 +178,7 @@ var RevealNotes = (function() {
 		var body = document.querySelector('body');
 		var slides = document.querySelector('.slides');
 
-		var s = 21;
+		var s = pointer_options.size || 15;
 
 		var pointer = document.createElement('div');
 		pointer.style.position = 'absolute';
@@ -167,7 +186,7 @@ var RevealNotes = (function() {
 		pointer.style.height = s + 'px';
 		pointer.style.marginLeft = '-' + Math.round(s / 2) + 'px';
 		pointer.style.marginTop = '-' + Math.round(s / 2) + 'px';
-		pointer.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
+		pointer.style.backgroundColor = pointer_options.color || 'rgba(255, 0, 0, 0.8)';
 		pointer.style.borderRadius = '50%';
 		pointer.style.zIndex = 20;
 		pointer.style.display = 'none';
@@ -259,7 +278,8 @@ var RevealNotes = (function() {
 			}
 		}
 
-		Reveal.addKeyBinding({keyCode: 65, key: 'A', description: 'Toggle pointer'}, togglePointer);
+		addKeyBinding(pointer_options.key, pointer_options.keyCode, 'A',
+					  'Toggle pointer', togglePointer);
 
 		return {point: point, togglePointer: togglePointer};
 	})();
@@ -293,15 +313,9 @@ var RevealNotes = (function() {
 		}
 
 		// Open the notes when the 's' key is hit
-		Reveal.addKeyBinding({keyCode: 83, key: 'S', description: 'Speaker notes view'}, function() {
-			openNotes();
-		} );
-
+		addKeyBinding(notes_options.key, notes_options.keyCode, 'S',
+					  'Speaker notes view', function() { openNotes(); });
 	}
 
-
-
-
 	return { open: openNotes, RevealPointer: RevealPointer };
-
 })();
