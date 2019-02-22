@@ -1,6 +1,6 @@
 {
     "name": "reveal.js-notes-pointer",
-    "version": "0.0.2",
+    "version": "0.1.0",
     "description": "A version of the reveal.js notes plugin with a cursor pointer.",
     "author": {
         "name": "Dougal J. Sutherland",
