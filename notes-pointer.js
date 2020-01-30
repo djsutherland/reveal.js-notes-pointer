@@ -13,6 +13,7 @@ var RevealNotes = (function() {
     var config = Reveal.getConfig();
     var options = config.notes_pointer || {};
     var pointer_options = options.pointer || {};
+    var spotlight_options = options.spotlight || {};
     var notes_options = options.notes || {};
 
     var notesPopup = null;
@@ -177,20 +178,27 @@ var RevealNotes = (function() {
         var callbackSet = false;
         var body = document.querySelector('body');
         var slides = document.querySelector('.slides');
+        function createDisk(dimension, color) {
+            var disk = document.createElement('div');
+            disk.style.position = 'absolute';
+            disk.style.width = dimension + 'px';
+            disk.style.height = dimension + 'px';
+            disk.style.marginLeft = '-' + Math.round(dimension / 2) + 'px';
+            disk.style.marginTop = '-' + Math.round(dimension / 2) + 'px';
+            disk.style.borderRadius = '50%';
+            disk.style.zIndex = 20;
+            disk.style.display = 'none';
+            slides.appendChild(disk);  // a *slides* element, so position scales
+            return disk;
+        }
+        function createPointer() {
+            var pointer = createDisk(pointer_options.size || 15);
+            pointer.dataset.remote="togglePointer"
+            pointer.style.backgroundColor = pointer_options.color || 'rgba(255, 0, 0, 0.8)';
+            return pointer;
+        }
 
-        var s = pointer_options.size || 15;
-
-        var pointer = document.createElement('div');
-        pointer.style.position = 'absolute';
-        pointer.style.width = s + 'px';
-        pointer.style.height = s + 'px';
-        pointer.style.marginLeft = '-' + Math.round(s / 2) + 'px';
-        pointer.style.marginTop = '-' + Math.round(s / 2) + 'px';
-        pointer.style.backgroundColor = pointer_options.color || 'rgba(255, 0, 0, 0.8)';
-        pointer.style.borderRadius = '50%';
-        pointer.style.zIndex = 20;
-        pointer.style.display = 'none';
-        slides.appendChild(pointer);  // a *slides* element, so position scales
+        var pointer = createPointer();
 
         function trackMouse(e) {
             // compute x, y positions relative to slides element in unscaled coords
@@ -278,10 +286,21 @@ var RevealNotes = (function() {
             }
         }
 
+        function toggleSpotlight() {
+            if (isPointing) {
+                pointerOff();
+            } else {
+                pointerOn();
+            }
+        }
+
         addKeyBinding(pointer_options.key, pointer_options.keyCode, 'A',
                       'Toggle pointer', togglePointer);
 
-        return {point: point, togglePointer: togglePointer};
+        addKeyBinding(spotlight_options.key, spotlight_options.keyCode, 'Z',
+                      'Toggle spotlight', toggleSpotlight);
+
+        return {point: point, togglePointer: togglePointer, toggleSpotlight: toggleSpotlight};
     })();
 
     // add a Reveal.point API function, so postMessage can handle it
