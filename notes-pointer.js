@@ -191,14 +191,35 @@ var RevealNotes = (function() {
             slides.appendChild(disk);  // a *slides* element, so position scales
             return disk;
         }
-        function createPointer() {
+        /**
+         * Creates the pointer disk object
+         * @param {string} id id of that pointer
+         */
+        function createPointer(id) {
             var pointer = createDisk(pointer_options.size || 15);
             pointer.dataset.remote="togglePointer"
+            pointer.dataset.id = id
             pointer.style.backgroundColor = pointer_options.color || 'rgba(255, 0, 0, 0.8)';
             return pointer;
         }
 
-        var pointer = createPointer();
+        /**
+         * Creates the spotlight disk object
+         * @param {string} id id of that spotlight
+         */
+        function createSpotlight(id) {
+            var pointer = createDisk(pointer_options.size || 15);
+            pointer.dataset.remote="toggleSpotlight"
+            pointer.dataset.id = id
+            pointer.style.backgroundColor = pointer_options.color || 'rgba(0, 0, 255, 0.8)';
+            return pointer;
+        }
+
+        /** The usable pointers */
+        var pointers ={
+            pointer: createPointer("pointer"),
+            spotlight: createSpotlight("spotlight")
+        };
 
         function trackMouse(e) {
             // compute x, y positions relative to slides element in unscaled coords
@@ -225,8 +246,8 @@ var RevealNotes = (function() {
             }
 
             // x, y are in *unscaled* coordinates
-            pointer.style.left = x + 'px';
-            pointer.style.top = y + 'px';
+            pointers['pointer'].style.left = x + 'px';
+            pointers['pointer'].style.top = y + 'px';
         }
 
         function postPointer(x, y, state) {
@@ -250,11 +271,11 @@ var RevealNotes = (function() {
         }
 
         function showPointer() {
-            pointer.style.display = 'block';
+            pointers['pointer'].style.display = 'block';
         }
 
         function hidePointer() {
-            pointer.style.display = 'none';
+            pointers['pointer'].style.display = 'none';
         }
 
         function pointerOn() {
