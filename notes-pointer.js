@@ -17,11 +17,11 @@ var RevealNotes = (function() {
         'pointer': {
             color: 'rgba(255, 0, 0, 0.8)',
             key: 'A'
-/*        },
+        },
         'spotlight': {
             color: 'rgba(0, 0, 255, 0.8)',
             key: 'Z'
-        */        }
+        }
     }
 
     var config = Reveal.getConfig();
@@ -302,8 +302,8 @@ var RevealNotes = (function() {
 
         Pointer.prototype.postPointer = function(x, y, state) {
             var message = {
-                type: 'point',
-//                type: this.exposedPoint,
+//                type: 'point',
+                type: this.exposedPoint,
                 x: x,
                 y: y,
                 state: state
@@ -323,10 +323,10 @@ var RevealNotes = (function() {
 
         Pointer.prototype.getExposedFunctions = function() {
             var returned = {}
-//            returned[this.exposedPoint]  =this.point.bind(this)
-            returned['point'] = this.point.bind(this)
-//            returned[this.exposedToggle] = this.toggle.bind(this)
-            returned['toggle'] = this.toggle.bind(this)
+            returned[this.exposedPoint]  =this.point.bind(this)
+//            returned['point'] = this.point.bind(this)
+            returned[this.exposedToggle] = this.toggle.bind(this)
+//            returned['toggle'] = this.toggle.bind(this)
             return returned
         }
 
