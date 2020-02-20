@@ -10,17 +10,56 @@
  *    to the notes window
  */
 var RevealNotes = (function() {
+
     /**
      * Default values for options (and also hash of available pointers)
      */
     var DEFAULT_OPTIONS = {
         'pointer': {
             color: 'rgba(255, 0, 0, 0.8)',
-            key: 'A'
+            key: 'A',
+            'createPointer': function(slides, id, options) {
+                var dimension = 20
+                var disk = document.createElement('div');
+                disk.style.position = 'absolute';
+                disk.style.width = dimension + 'px';
+                disk.style.height = dimension + 'px';
+                disk.style.marginLeft = '-' + Math.round(dimension / 2) + 'px';
+                disk.style.marginTop = '-' + Math.round(dimension / 2) + 'px';
+                disk.style.borderRadius = '50%';
+                disk.style.zIndex = 20;
+                disk.style.display = 'none';
+                disk.dataset.id = id
+                disk.style.backgroundColor = options.color;
+                return disk;
+            },
+            'applyMove': function(disk, x, y) {
+                disk.style.left = x + 'px';
+                disk.style.top = y + 'px';
+            }
         },
         'spotlight': {
-            color: 'rgba(0, 0, 255, 0.8)',
-            key: 'Z'
+            key: 'Z',
+            'createPointer': function(slides, id, options) {
+                var dimension = 100
+                var disk = document.createElement('div');
+                disk.style.position = 'absolute';
+                disk.style.position = 'fixed';
+                disk.style.width = '100%';
+                disk.style.height = '100%';
+                disk.style.left= '0';
+                disk.style.top= '0';
+                disk.style.zIndex = 20;
+                disk.style.display = 'none';
+                disk.style['background'] = "radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(0,0,0,1) 100%) no-repeat"
+                disk.dataset.id = id
+                return disk;
+            },
+            'applyMove': function(disk, x, y) {
+                disk.style['background'] = 'radial-gradient(circle at '+x+'px '+y+'px, '+
+                    'rgba(255,255,255,0) 0%, '+
+                    'rgba(0,0,0,1) 100%) no-repeat'
+            }
         }
     }
 
@@ -196,7 +235,9 @@ var RevealNotes = (function() {
             this.options = options;
             /** id given by config index, allowing later lookup */
             this.id = id
-            this.pointer = this.createPointer(id, options)
+            this.pointer = options.createPointer(slides, id, options)
+            this.applyMove = options.applyMove
+            slides.appendChild(this.pointer);
             addKeyBinding(options.key, options.keyCode, options.key,
                 'Toggle '+id, 
                 // Seems like modern JS magic ! https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
@@ -206,32 +247,6 @@ var RevealNotes = (function() {
             this.exposedToggle = 'toggle'+id
             // And made a binding for tracker to keep context
             this.tracker = this.trackMouse.bind(this)
-        }
-
-        /**
-         * Base disk creation function
-         */
-        Pointer.prototype.createDisk = function(dimension, color) {
-            var disk = document.createElement('div');
-            disk.style.position = 'absolute';
-            disk.style.width = dimension + 'px';
-            disk.style.height = dimension + 'px';
-            disk.style.marginLeft = '-' + Math.round(dimension / 2) + 'px';
-            disk.style.marginTop = '-' + Math.round(dimension / 2) + 'px';
-            disk.style.borderRadius = '50%';
-            disk.style.zIndex = 20;
-            disk.style.display = 'none';
-            slides.appendChild(disk);  // a *slides* element, so position scales
-            return disk;
-        }
-        /** 
-         * Creates the pointer with the correct configuration and id
-         */
-        Pointer.prototype.createPointer = function(id, options) {
-            var pointer = this.createDisk(options.size || 15);
-            pointer.dataset.id = id
-            pointer.style.backgroundColor = options.color;
-            return pointer;
         }
 
         Pointer.prototype.showPointer = function () {
@@ -260,7 +275,7 @@ var RevealNotes = (function() {
                 this.callbackSet = false;
             }
             this.isPointing = false;
-            this.postPointer(0, 0, false);
+            this.postPointer(0, 0, {"pointer":this.id, "active":false});
         }
 
         Pointer.prototype.toggle = function(e) {
@@ -284,26 +299,25 @@ var RevealNotes = (function() {
                 var offsetX = (e.clientX - slides_left) / scale;
                 var offsetY = (e.clientY - slides_top) / scale;
 
-                this.point(offsetX, offsetY, true);
-                this.postPointer(offsetX, offsetY, true);
+                state = {"pointer":this.id, "active":true}
+                this.point(offsetX, offsetY, state);
+                this.postPointer(offsetX, offsetY, state);
         }
 
         Pointer.prototype.point = function(x, y, state) {
-            if (state === true) {
+            if (state.active||false === true) {
                 this.showPointer();
-            } else if (state === false) {
+            } else {
                 this.hidePointer();
             }
 
             // x, y are in *unscaled* coordinates
-            this.pointer.style.left = x + 'px';
-            this.pointer.style.top = y + 'px';
+            this.applyMove(this.pointer, x, y)
         }
 
         Pointer.prototype.postPointer = function(x, y, state) {
             var message = {
-//                type: 'point',
-                type: this.exposedPoint,
+                type: 'point',
                 x: x,
                 y: y,
                 state: state
@@ -354,6 +368,11 @@ var RevealNotes = (function() {
     // add a Reveal.point API function, so postMessage can handle it
     for(var functionName in RevealPointer) {
         Reveal[functionName] = RevealPointer[functionName];
+        console.info("adding function "+functionName)
+    }
+
+    Reveal["point"] = function(x, y, state) {
+        RevealPointer["point"+state.pointer](x, y, state)
     }
 
     // patch in Reveal.getSlidesAttributes, in dev branch but not in 3.7.0
