@@ -10,9 +10,69 @@
  *    to the notes window
  */
 var RevealNotes = (function() {
+
+    /**
+     * Default values for options (and also hash of available pointers)
+     */
+    var DEFAULT_OPTIONS = {
+        'pointer': {
+            size: 20,
+            color: 'rgba(255, 0, 0, 0.8)',
+            key: 'A',
+            'createPointer': function(slides, id, options) {
+                var dimension = options.size;
+                var disk = document.createElement('div');
+                disk.style.position = 'absolute';
+                disk.style.width = dimension + 'px';
+                disk.style.height = dimension + 'px';
+                disk.style.marginLeft = '-' + Math.round(dimension / 2) + 'px';
+                disk.style.marginTop = '-' + Math.round(dimension / 2) + 'px';
+                disk.style.borderRadius = '50%';
+                disk.style.zIndex = 20;
+                disk.style.display = 'none';
+                disk.dataset.id = id;
+                disk.style.backgroundColor = options.color;
+                return disk;
+            },
+            'applyMove': function(disk, options, x, y) {
+                disk.style.left = x + 'px';
+                disk.style.top = y + 'px';
+            }
+        },
+        'spotlight': {
+            borderColor: 'rgba(34,34,34, 1)',
+            edgeColor: 'rgba(34,34,34, 0.8)',
+            centerColor: 'rgba(0, 255, 0, 0)',
+            key: 'Z',
+            size: 100,
+            'createPointer': function(slides, id, options) {
+                var disk = document.createElement('div');
+                disk.style.position = 'absolute';
+                disk.style.position = 'fixed';
+                disk.style.width = '100%';
+                disk.style.height = '100%';
+                disk.style.left= '0';
+                disk.style.top= '0';
+                disk.style.zIndex = 20;
+                disk.style.display = 'none';
+                disk.style['background'] = 'radial-gradient(circle, '+
+                    options.centerColor+' 0%, '+
+                    options.edgeColor+ ' '+options.size+'px,'+
+                    options.borderColor+' 100%)';
+                disk.dataset.id = id;
+                return disk;
+            },
+            'applyMove': function(disk, options, x, y) {
+                disk.style['background'] = 'radial-gradient(circle at '+x+'px '+y+'px, '+
+                    options.centerColor+' 0%, '+
+                    options.edgeColor+ ' '+options.size+'px,'+
+                    options.borderColor+' 100%)';
+            }
+        }
+    }
+
     var config = Reveal.getConfig();
     var options = config.notes_pointer || {};
-    var pointer_options = options.pointer || {};
     var notes_options = options.notes || {};
 
     var notesPopup = null;
@@ -143,7 +203,6 @@ var RevealNotes = (function() {
             }
 
             notesPopup.postMessage( JSON.stringify( messageData ), '*' );
-
         }
 
 
@@ -164,128 +223,161 @@ var RevealNotes = (function() {
 
             // Post the initial state
             post();
-
         }
 
         connect();
-
     }
 
 
     var RevealPointer = (function() {
-        var isPointing = false;
-        var callbackSet = false;
         var body = document.querySelector('body');
         var slides = document.querySelector('.slides');
 
-        var s = pointer_options.size || 15;
-
-        var pointer = document.createElement('div');
-        pointer.style.position = 'absolute';
-        pointer.style.width = s + 'px';
-        pointer.style.height = s + 'px';
-        pointer.style.marginLeft = '-' + Math.round(s / 2) + 'px';
-        pointer.style.marginTop = '-' + Math.round(s / 2) + 'px';
-        pointer.style.backgroundColor = pointer_options.color || 'rgba(255, 0, 0, 0.8)';
-        pointer.style.borderRadius = '50%';
-        pointer.style.zIndex = 20;
-        pointer.style.display = 'none';
-        slides.appendChild(pointer);  // a *slides* element, so position scales
-
-        function trackMouse(e) {
-            // compute x, y positions relative to slides element in unscaled coords
-            var slidesRect = slides.getBoundingClientRect();
-            var slides_left = slidesRect.left, slides_top = slidesRect.top;
-            if (slides.style.zoom) {  // zoom is weird.
-                slides_left *= slides.style.zoom;
-                slides_top *= slides.style.zoom;
-            }
-
-            var scale = Reveal.getScale();
-            var offsetX = (e.clientX - slides_left) / scale;
-            var offsetY = (e.clientY - slides_top) / scale;
-
-            point(offsetX, offsetY, true);
-            postPointer(offsetX, offsetY, true);
+        var Pointer = function(id, options) {
+            this.isPointing = false;
+            this.callbackSet = false;
+                /** config defined by user, which contains all useful informations */
+            this.options = options;
+            /** id given by config index, allowing later lookup */
+            this.id = id;
+            this.pointer = options.createPointer(slides, id, options);
+            this.applyMove = options.applyMove;
+            slides.appendChild(this.pointer);
+            addKeyBinding(options.key, options.keyCode, options.key,
+                'Toggle '+id, 
+                // Seems like modern JS magic ! https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
+                this.toggle.bind(this));
+            // Exposed functions ids
+            this.exposedPoint = 'point'+id;
+            this.exposedToggle = 'toggle'+id;
+            // And made a binding for tracker to keep context
+            this.tracker = this.trackMouse.bind(this);
         }
 
-        function point(x, y, state) {
-            if (state === true) {
-                showPointer();
-            } else if (state === false) {
-                hidePointer();
+        Pointer.prototype.showPointer = function () {
+            this.pointer.style.display = 'block';
+        }
+
+        Pointer.prototype.hidePointer = function() {
+            this.pointer.style.display = 'none';
+        }
+
+        Pointer.prototype.pointerOn = function() {
+            this.showPointer();
+            body.style.cursor = 'none';
+            if( !this.callbackSet ) {
+                document.addEventListener('mousemove', this.tracker);
+                this.callbackSet = true;
+            }
+            this.isPointing = true;
+        }
+
+        Pointer.prototype.pointerOff = function() {
+            this.hidePointer();
+            body.style.cursor = 'auto';
+            if( this.callbackSet ) {
+                document.removeEventListener('mousemove', this.tracker);
+                this.callbackSet = false;
+            }
+            this.isPointing = false;
+            this.postPointer(0, 0, {"pointer":this.id, "active":false});
+        }
+
+        Pointer.prototype.toggle = function(e) {
+            if (this.isPointing) {
+                this.pointerOff();
+            } else {
+                this.pointerOn();
+            }
+        }
+
+        Pointer.prototype.trackMouse = function(e) {
+                // compute x, y positions relative to slides element in unscaled coords
+                var slidesRect = slides.getBoundingClientRect();
+                var slides_left = slidesRect.left, slides_top = slidesRect.top;
+                if (slides.style.zoom) {  // zoom is weird.
+                    slides_left *= slides.style.zoom;
+                    slides_top *= slides.style.zoom;
+                }
+
+                var scale = Reveal.getScale();
+                var offsetX = (e.clientX - slides_left) / scale;
+                var offsetY = (e.clientY - slides_top) / scale;
+
+                state = {"pointer":this.id, "active":true}
+                this.point(offsetX, offsetY, state);
+                this.postPointer(offsetX, offsetY, state);
+        }
+
+        Pointer.prototype.point = function(x, y, state) {
+            if (state.active||false === true) {
+                this.showPointer();
+            } else {
+                this.hidePointer();
             }
 
             // x, y are in *unscaled* coordinates
-            pointer.style.left = x + 'px';
-            pointer.style.top = y + 'px';
+            // Movin depends upon the type of pointer used
+            this.applyMove(this.pointer, this.options, x, y);
         }
 
-        function postPointer(x, y, state) {
+        Pointer.prototype.postPointer = function(x, y, state) {
+            var message = {
+                type: 'point',
+                x: x,
+                y: y,
+                state: state
+            }
+            var receiver = null;
             if (notesPopup) {
-                notesPopup.postMessage(JSON.stringify({
-                    namespace: 'reveal-notes',
-                    type: 'point',
-                    x: x,
-                    y: y,
-                    state: state
-                }), '*');
+                message = Object.assign(message, {namespace: 'reveal-notes'});
+                receiver = notesPopup;
             } else if (Reveal.getConfig().postMessageEvents && window.parent !== window.self) {
-                window.parent.postMessage(JSON.stringify({
-                    namespace: 'reveal',
-                    type: 'point',
-                    x: x,
-                    y: y,
-                    state: state
-                }), '*');
+                message = Object.assign(message, {namespace: 'reveal'});
+                receiver = window.parent;
             }
+            var stringified = JSON.stringify(message);
+            console.debug("posting message", message, "in string", stringified);
+            receiver.postMessage(stringified, '*');
         }
 
-        function showPointer() {
-            pointer.style.display = 'block';
+        Pointer.prototype.getExposedFunctions = function() {
+            var returned = {};
+            returned[this.exposedPoint]  =this.point.bind(this);
+            returned[this.exposedToggle] = this.toggle.bind(this);
+            return returned;
         }
 
-        function hidePointer() {
-            pointer.style.display = 'none';
-        }
+        /** The usable pointers */
+        var pointers ={};
 
-        function pointerOn() {
-            showPointer();
-            body.style.cursor = 'none';
-            if( !callbackSet ) {
-                document.addEventListener('mousemove', trackMouse);
-                callbackSet = true;
+        /* The exposed functions, usable by Reveal API */
+        var exported = {}
+
+        // Fill the pointers with the ones read from config
+        for(var optionName in DEFAULT_OPTIONS) {
+            var optionsFor = DEFAULT_OPTIONS[optionName];
+            if(options.hasOwnProperty(optionName)) {
+                optionsFor = Object.assign({}, optionsFor, options[optionName]);
             }
-            isPointing = true;
+            // Declaring the pointer does everything : registering keybindings and functions !
+            pointers[optionName] = new Pointer(optionName, optionsFor);
+            exported = Object.assign(exported, pointers[optionName].getExposedFunctions());
         }
 
-        function pointerOff() {
-            hidePointer();
-            body.style.cursor = 'auto';
-            if( callbackSet ) {
-                document.removeEventListener('mousemove', trackMouse);
-                callbackSet = false;
-            }
-            isPointing = false;
-            postPointer(0, 0, false);
-        }
-
-        function togglePointer() {
-            if (isPointing) {
-                pointerOff();
-            } else {
-                pointerOn();
-            }
-        }
-
-        addKeyBinding(pointer_options.key, pointer_options.keyCode, 'A',
-                      'Toggle pointer', togglePointer);
-
-        return {point: point, togglePointer: togglePointer};
+        return exported;
     })();
 
     // add a Reveal.point API function, so postMessage can handle it
-    Reveal.point = RevealPointer.point;
+    for(var functionName in RevealPointer) {
+        Reveal[functionName] = RevealPointer[functionName];
+        console.debug("adding function "+functionName);
+    }
+
+    // Add a global point function, which will redirect to RevealPointer associated functions
+    Reveal["point"] = function(x, y, state) {
+        RevealPointer["point"+state.pointer](x, y, state);
+    }
 
     // patch in Reveal.getSlidesAttributes, in dev branch but not in 3.7.0
     if( !Reveal.getSlidesAttributes ) {
@@ -298,9 +390,7 @@ var RevealNotes = (function() {
                     attributes[ attribute.name ] = attribute.value;
                 }
                 return attributes;
-
             } );
-
         }
     }
 
