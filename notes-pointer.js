@@ -20,7 +20,7 @@ var RevealNotes = (function() {
             color: 'rgba(255, 0, 0, 0.8)',
             key: 'A',
             'createPointer': function(slides, id, options) {
-                var dimension = options.size
+                var dimension = options.size;
                 var disk = document.createElement('div');
                 disk.style.position = 'absolute';
                 disk.style.width = dimension + 'px';
@@ -30,7 +30,7 @@ var RevealNotes = (function() {
                 disk.style.borderRadius = '50%';
                 disk.style.zIndex = 20;
                 disk.style.display = 'none';
-                disk.dataset.id = id
+                disk.dataset.id = id;
                 disk.style.backgroundColor = options.color;
                 return disk;
             },
@@ -58,15 +58,15 @@ var RevealNotes = (function() {
                 disk.style['background'] = 'radial-gradient(circle, '+
                     options.centerColor+' 0%, '+
                     options.edgeColor+ ' '+options.size+'px,'+
-                    options.borderColor+' 100%)'
-                disk.dataset.id = id
+                    options.borderColor+' 100%)';
+                disk.dataset.id = id;
                 return disk;
             },
             'applyMove': function(disk, options, x, y) {
                 disk.style['background'] = 'radial-gradient(circle at '+x+'px '+y+'px, '+
                     options.centerColor+' 0%, '+
                     options.edgeColor+ ' '+options.size+'px,'+
-                    options.borderColor+' 100%)'
+                    options.borderColor+' 100%)';
             }
         }
     }
@@ -203,7 +203,6 @@ var RevealNotes = (function() {
             }
 
             notesPopup.postMessage( JSON.stringify( messageData ), '*' );
-
         }
 
 
@@ -224,11 +223,9 @@ var RevealNotes = (function() {
 
             // Post the initial state
             post();
-
         }
 
         connect();
-
     }
 
 
@@ -242,19 +239,19 @@ var RevealNotes = (function() {
                 /** config defined by user, which contains all useful informations */
             this.options = options;
             /** id given by config index, allowing later lookup */
-            this.id = id
-            this.pointer = options.createPointer(slides, id, options)
-            this.applyMove = options.applyMove
+            this.id = id;
+            this.pointer = options.createPointer(slides, id, options);
+            this.applyMove = options.applyMove;
             slides.appendChild(this.pointer);
             addKeyBinding(options.key, options.keyCode, options.key,
                 'Toggle '+id, 
                 // Seems like modern JS magic ! https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
                 this.toggle.bind(this));
             // Exposed functions ids
-            this.exposedPoint = 'point'+id
-            this.exposedToggle = 'toggle'+id
+            this.exposedPoint = 'point'+id;
+            this.exposedToggle = 'toggle'+id;
             // And made a binding for tracker to keep context
-            this.tracker = this.trackMouse.bind(this)
+            this.tracker = this.trackMouse.bind(this);
         }
 
         Pointer.prototype.showPointer = function () {
@@ -320,7 +317,8 @@ var RevealNotes = (function() {
             }
 
             // x, y are in *unscaled* coordinates
-            this.applyMove(this.pointer, this.options, x, y)
+            // Movin depends upon the type of pointer used
+            this.applyMove(this.pointer, this.options, x, y);
         }
 
         Pointer.prototype.postPointer = function(x, y, state) {
@@ -330,26 +328,24 @@ var RevealNotes = (function() {
                 y: y,
                 state: state
             }
-            var receiver = null
+            var receiver = null;
             if (notesPopup) {
-                message = Object.assign(message, {namespace: 'reveal-notes'})
-                receiver = notesPopup
+                message = Object.assign(message, {namespace: 'reveal-notes'});
+                receiver = notesPopup;
             } else if (Reveal.getConfig().postMessageEvents && window.parent !== window.self) {
-                message = Object.assign(message, {namespace: 'reveal'})
+                message = Object.assign(message, {namespace: 'reveal'});
                 receiver = window.parent;
             }
-            var stringified = JSON.stringify(message)
-            console.info("posting message", message, "in string", stringified)
+            var stringified = JSON.stringify(message);
+            console.debug("posting message", message, "in string", stringified);
             receiver.postMessage(stringified, '*');
         }
 
         Pointer.prototype.getExposedFunctions = function() {
-            var returned = {}
-            returned[this.exposedPoint]  =this.point.bind(this)
-//            returned['point'] = this.point.bind(this)
-            returned[this.exposedToggle] = this.toggle.bind(this)
-//            returned['toggle'] = this.toggle.bind(this)
-            return returned
+            var returned = {};
+            returned[this.exposedPoint]  =this.point.bind(this);
+            returned[this.exposedToggle] = this.toggle.bind(this);
+            return returned;
         }
 
         /** The usable pointers */
@@ -360,15 +356,14 @@ var RevealNotes = (function() {
 
         // Fill the pointers with the ones read from config
         for(var optionName in DEFAULT_OPTIONS) {
-            var optionsFor = DEFAULT_OPTIONS[optionName]
+            var optionsFor = DEFAULT_OPTIONS[optionName];
             if(options.hasOwnProperty(optionName)) {
-                optionsFor = Object.assign({}, optionsFor, options[optionName])
+                optionsFor = Object.assign({}, optionsFor, options[optionName]);
             }
             // Declaring the pointer does everything : registering keybindings and functions !
-            pointers[optionName] = new Pointer(optionName, optionsFor)
-            exported = Object.assign(exported, pointers[optionName].getExposedFunctions())
+            pointers[optionName] = new Pointer(optionName, optionsFor);
+            exported = Object.assign(exported, pointers[optionName].getExposedFunctions());
         }
-
 
         return exported;
     })();
@@ -376,11 +371,12 @@ var RevealNotes = (function() {
     // add a Reveal.point API function, so postMessage can handle it
     for(var functionName in RevealPointer) {
         Reveal[functionName] = RevealPointer[functionName];
-        console.info("adding function "+functionName)
+        console.debug("adding function "+functionName);
     }
 
+    // Add a global point function, which will redirect to RevealPointer associated functions
     Reveal["point"] = function(x, y, state) {
-        RevealPointer["point"+state.pointer](x, y, state)
+        RevealPointer["point"+state.pointer](x, y, state);
     }
 
     // patch in Reveal.getSlidesAttributes, in dev branch but not in 3.7.0
@@ -394,9 +390,7 @@ var RevealNotes = (function() {
                     attributes[ attribute.name ] = attribute.value;
                 }
                 return attributes;
-
             } );
-
         }
     }
 
