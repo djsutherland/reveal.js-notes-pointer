@@ -16,10 +16,11 @@ var RevealNotes = (function() {
      */
     var DEFAULT_OPTIONS = {
         'pointer': {
+            size: 20,
             color: 'rgba(255, 0, 0, 0.8)',
             key: 'A',
             'createPointer': function(slides, id, options) {
-                var dimension = 20
+                var dimension = options.size
                 var disk = document.createElement('div');
                 disk.style.position = 'absolute';
                 disk.style.width = dimension + 'px';
@@ -43,8 +44,8 @@ var RevealNotes = (function() {
             edgeColor: 'rgba(34,34,34, 0.8)',
             centerColor: 'rgba(0, 255, 0, 0)',
             key: 'Z',
+            size: 100,
             'createPointer': function(slides, id, options) {
-                var dimension = 100
                 var disk = document.createElement('div');
                 disk.style.position = 'absolute';
                 disk.style.position = 'fixed';
@@ -56,7 +57,7 @@ var RevealNotes = (function() {
                 disk.style.display = 'none';
                 disk.style['background'] = 'radial-gradient(circle, '+
                     options.centerColor+' 0%, '+
-                    options.edgeColor+ ' 100px,'+
+                    options.edgeColor+ ' '+options.size+'px,'+
                     options.borderColor+' 100%)'
                 disk.dataset.id = id
                 return disk;
@@ -64,7 +65,7 @@ var RevealNotes = (function() {
             'applyMove': function(disk, options, x, y) {
                 disk.style['background'] = 'radial-gradient(circle at '+x+'px '+y+'px, '+
                     options.centerColor+' 0%, '+
-                    options.edgeColor+ ' 100px,'+
+                    options.edgeColor+ ' '+options.size+'px,'+
                     options.borderColor+' 100%)'
             }
         }

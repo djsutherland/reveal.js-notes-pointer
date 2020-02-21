@@ -13,6 +13,13 @@ Reveal.initialize({
             color: 'rgba(255, 0, 0, 0.8)',  // something valid for css background-color
             key: 'A'
         },
+		spotlight: {
+            borderColor: 'rgba(34,34,34, 1)', // color at screen border (use your background color with full opacity)
+            edgeColor: 'rgba(34,34,34, 0.8)', // color at spotlight edge (use your background color with a nice alpha)
+            centerColor: 'rgba(0, 255, 0, 0)', // color at spotlight center (this one should be transparent)
+            key: 'Z',
+            size: 100, // size of spotlight
+        }
         notes: {
             key: 'S'
         }
