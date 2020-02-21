@@ -33,12 +33,15 @@ var RevealNotes = (function() {
                 disk.style.backgroundColor = options.color;
                 return disk;
             },
-            'applyMove': function(disk, x, y) {
+            'applyMove': function(disk, options, x, y) {
                 disk.style.left = x + 'px';
                 disk.style.top = y + 'px';
             }
         },
         'spotlight': {
+            borderColor: 'rgba(34,34,34, 1)',
+            edgeColor: 'rgba(34,34,34, 0.8)',
+            centerColor: 'rgba(0, 255, 0, 0)',
             key: 'Z',
             'createPointer': function(slides, id, options) {
                 var dimension = 100
@@ -51,14 +54,18 @@ var RevealNotes = (function() {
                 disk.style.top= '0';
                 disk.style.zIndex = 20;
                 disk.style.display = 'none';
-                disk.style['background'] = "radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(0,0,0,1) 100%) no-repeat"
+                disk.style['background'] = 'radial-gradient(circle, '+
+                    options.centerColor+' 0%, '+
+                    options.edgeColor+ ' 100px,'+
+                    options.borderColor+' 100%)'
                 disk.dataset.id = id
                 return disk;
             },
-            'applyMove': function(disk, x, y) {
+            'applyMove': function(disk, options, x, y) {
                 disk.style['background'] = 'radial-gradient(circle at '+x+'px '+y+'px, '+
-                    'rgba(255,255,255,0) 0%, '+
-                    'rgba(0,0,0,1) 100%) no-repeat'
+                    options.centerColor+' 0%, '+
+                    options.edgeColor+ ' 100px,'+
+                    options.borderColor+' 100%)'
             }
         }
     }
@@ -312,7 +319,7 @@ var RevealNotes = (function() {
             }
 
             // x, y are in *unscaled* coordinates
-            this.applyMove(this.pointer, x, y)
+            this.applyMove(this.pointer, this.options, x, y)
         }
 
         Pointer.prototype.postPointer = function(x, y, state) {
